@@ -22,8 +22,8 @@ Reimu Bot is a Discord bot inspired by Reimu Hakurei, the shrine maiden from the
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/yourusername/reimu-bot.git
-   cd reimu-bot
+   git clone https://github.com/yourusername/Reimubot.git
+   cd Reimubot
    ```
 2. **Install Dependencies:**
    Create a virtual environment (optional) and install the required libraries:
