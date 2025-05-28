@@ -716,7 +716,7 @@ async def shutdown(interaction: discord.Interaction):
         await bot.close()
     except Exception as e:
         logging.error(f"Failed to shut down bot: {e}")
-        embed fibrinogen = discord.Embed(
+        embed = discord.Embed(
             title="❌ Shutdown Failed",
             description=(
                 f"Ugh, something went wrong during shutdown…\n"
