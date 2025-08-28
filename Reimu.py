@@ -331,43 +331,45 @@ async def on_ready():
         
     init_db()
 
-@bot.slash_command(name="draw_lots", description="Ask Reimu Hakurei to draw a fortune for you, seeking spiritual guidance!")
+@bot.slash_command(name="draw_lots", description="Ask Reimu Hakurei to draw an omikuji for you and seek spiritual guidance!")
 async def draw_lots_command(interaction: discord.Interaction):
     cooldown_hours = 5
     user_id = interaction.user
     guild_id = str(user_id.guild.id)
     user_id_str = str(user_id.id)
-    
+
+    # === Check cooldown ===
     on_cooldown, remaining_time = is_on_cooldown(user_id, cooldown_hours)
-    
     if on_cooldown:
         user_data = load_json("Reimu_lots.json", default={})
         if guild_id not in user_data:
             user_data[guild_id] = {}
         if user_id_str not in user_data[guild_id]:
             user_data[guild_id][user_id_str] = {}
-        
+
         repeat_count = user_data[guild_id][user_id_str].get("repeat_count", 0) + 1
         user_data[guild_id][user_id_str]["repeat_count"] = repeat_count
         save_json("Reimu_lots.json", user_data)
-        
+
         if repeat_count == 1:
             await interaction.response.send_message(
-                f"Hey, don't rush to draw lots! My spiritual power isn't ready yet. Come back in {remaining_time}, or I'll charge you extra donation money!",
+                f"Hey, don’t rush! My spiritual power isn’t ready yet. Come back in {remaining_time}, "
+                f"or I’ll start charging you extra donation money!",
                 ephemeral=True
             )
             return
         elif repeat_count == 2:
             await interaction.response.send_message(
-                f"You're still trying to draw?! I said my spiritual power isn't ready. Come back in {remaining_time}! Keep this up, and I'll charge you 5000 donation money!",
+                f"You’re still drawing?! I told you the power isn’t ready yet. "
+                f"Come back in {remaining_time}! Next time I’ll charge you 5000 donation coins!",
                 ephemeral=True
             )
             return
         else:
-            # Penalty deduction
+            # Penalty: deduct coins
             reimu_balance_data = load_json("Reimu_balance.json", default={})
             balance_data = load_json("balance.json", default={})
-            
+
             if guild_id not in reimu_balance_data:
                 reimu_balance_data[guild_id] = {}
             if user_id_str not in reimu_balance_data[guild_id]:
@@ -387,7 +389,9 @@ async def draw_lots_command(interaction: discord.Interaction):
                 user_data[guild_id][user_id_str]["repeat_count"] = 0
                 save_json("Reimu_lots.json", user_data)
                 await interaction.response.send_message(
-                    f"You've tried {repeat_count} times, and I'm fed up! Deducted 5000 from your special donation money. Remaining: {reimu_balance_data[guild_id][user_id_str]}!",
+                    f"You’ve repeated {repeat_count} times, I’ve had enough! "
+                    f"5000 has been deducted from your **special donation balance**. "
+                    f"Remaining: {reimu_balance_data[guild_id][user_id_str]}!",
                     ephemeral=True
                 )
                 return
@@ -397,74 +401,104 @@ async def draw_lots_command(interaction: discord.Interaction):
                 user_data[guild_id][user_id_str]["repeat_count"] = 0
                 save_json("Reimu_lots.json", user_data)
                 await interaction.response.send_message(
-                    f"You've tried {repeat_count} times, and I'm fed up! Deducted 5000 from your regular donation money. Remaining: {balance_data[guild_id][user_id_str]}!",
+                    f"You’ve repeated {repeat_count} times, I’ve had enough! "
+                    f"5000 has been deducted from your **normal donation balance**. "
+                    f"Remaining: {balance_data[guild_id][user_id_str]}!",
                     ephemeral=True
                 )
                 return
             else:
                 total = reimu_balance + normal_balance
                 await interaction.response.send_message(
-                    f"Hmph, you've tried {repeat_count} times, but your donation money isn't enough (total: {total})! I'll let you off this time, but don't expect it next time!",
+                    f"Hmph, you’ve already repeated {repeat_count} times, "
+                    f"but you don’t even have enough donation money (currently {total}). "
+                    f"I’ll let it slide this time, but don’t count on luck next time!",
                     ephemeral=True
                 )
                 return
-    
+
+    # === Not on cooldown → real draw ===
     await interaction.response.defer()
-    
+
     result_text, color = draw_lots()
-    
-    embed = discord.Embed(
-        title="🎋 Reimu Hakurei's Fortune 🎋",
-        description=(
-            f"I am Reimu Hakurei, the shrine maiden of the Hakurei Shrine, now drawing a fortune for you!\n\n"
-            f"{result_text}\n\n"
-            "This is a result guided by spiritual power, so accept it graciously~ If your luck is bad, visit the shrine more often and donate some money!"
-        ),
-        color=color
-    )
-    
-    if bot.user.avatar:
-        embed.set_thumbnail(url=bot.user.display_avatar.url)
-    
-    fortune_type = result_text.split("\n")[0].split(":")[1].strip()
-    good_fortunes = ["Great Blessing", "Moderate Blessing", "Blessing"]
-    bad_fortunes = ["Misfortune", "Great Misfortune"]
-    
-    if fortune_type in good_fortunes:
-        comments = [
-            "Hmm, this fortune is pretty good. Come back to the shrine to thank me, and don't forget the donation money!",
-            "Nice luck! Looks like my spiritual power is reliable as always!",
-            "Great Blessing, huh? Perfect day to relax with some tea~",
-            "Not bad, this fortune makes me want to draw a few more myself!",
-            "My spiritual power says you're lucky today. Don't waste it!"
-        ]
-    elif fortune_type in bad_fortunes:
-        comments = [
-            "Ouch, this luck... Want me to blast away the bad fortune with my spell cards? It'll cost you, of course!",
-            "Misfortune? Don't blame me, the fortune decides itself. I'm just the shrine maiden~",
-            "Great Misfortune? Better come to the shrine for a blessing, or I can't guarantee tomorrow!",
-            "This luck is rough. Hurry to the shrine, and I'll figure out a way to help!",
-            "My spiritual power says your luck is bad. Play it safe and visit the shrine for a blessing!"
-        ]
-    else:
-        comments = [
-            "It's alright, a calm life is true happiness. Don't worry too much~",
-            "Small Blessing? Work hard, and things will improve. I believe in you!",
-            "My spiritual power says this is a fair result. Stop complaining and go earn some donation money!",
-            "Average luck? Play it steady and avoid risks!",
-            "This fortune says your luck is ordinary. A shrine visit could boost it!"
-        ]
-    
-    embed.set_footer(text=random.choice(comments))
-    
+
+    # === Track streak ===
     user_data = load_json("Reimu_lots.json", default={})
     if guild_id not in user_data:
         user_data[guild_id] = {}
     if user_id_str not in user_data[guild_id]:
         user_data[guild_id][user_id_str] = {}
+
+    today = datetime.now().date()
+    last_draw_str = user_data[guild_id][user_id_str].get("last_draw_date")
+
+    if last_draw_str:
+        last_draw = datetime.fromisoformat(last_draw_str).date()
+        if today == last_draw:
+            pass
+        elif today - last_draw == timedelta(days=1):
+            user_data[guild_id][user_id_str]["streak_count"] = user_data[guild_id][user_id_str].get("streak_count", 0) + 1
+        else:
+            user_data[guild_id][user_id_str]["streak_count"] = 1
+    else:
+        user_data[guild_id][user_id_str]["streak_count"] = 1
+
+    user_data[guild_id][user_id_str]["last_draw_date"] = today.isoformat()
+    save_json("Reimu_lots.json", user_data)
+
+    streak_count = user_data[guild_id][user_id_str]["streak_count"]
+
+    # === Embed reply ===
+    embed = discord.Embed(
+        title="🎋 Reimu Hakurei’s Omikuji 🎋",
+        description=(
+            f"I am Reimu Hakurei, shrine maiden of the Hakurei Shrine. Let me draw your fortune!\n\n"
+            f"{result_text}\n\n"
+            f"📅 You have drawn for **{streak_count} consecutive days**!\n\n"
+            "This result was guided by spiritual power, so accept it sincerely. "
+            "If luck isn’t on your side, come pray at the shrine… and don’t forget your donation!"
+        ),
+        color=color
+    )
+
+    if bot.user.avatar:
+        embed.set_thumbnail(url=bot.user.display_avatar.url)
+
+    fortune_type = result_text.split("\n")[0].split(":")[1].strip()
+    good_fortunes = ["Great Blessing", "Middle Blessing", "Blessing"]
+    bad_fortunes = ["Curse", "Great Curse"]
+
+    if fortune_type in good_fortunes:
+        comments = [
+            "Not bad at all! Remember to visit the shrine and thank me—donations included!",
+            "Good luck, huh? Seems like my spiritual power is working well!",
+            "A middle blessing? A cup of tea would suit you today.",
+            "Nice, such a fortune makes me want to draw one too!",
+            "The spirits say you’re lucky today—don’t waste it!"
+        ]
+    elif fortune_type in bad_fortunes:
+        comments = [
+            "Oh dear, this fortune… Want me to exorcise the misfortune with a spell card? Of course, it costs money!",
+            "A curse? Don’t blame me, the lot decides itself—I’m just the shrine maiden!",
+            "Great Curse… You’d better come to the shrine and pray, or I can’t guarantee tomorrow!",
+            "Looks grim. Hurry to the shrine, I’ll think of something!",
+            "The spirits say your luck is poor. Don’t take risks—praying is safest!"
+        ]
+    else:
+        comments = [
+            "It’s fine, an average life can be a blessing too. Don’t overthink it!",
+            "Future blessing? Small blessing? Work hard and it’ll get better, I believe in you!",
+            "The spirits say this is fair enough. Stop complaining and get back to work—earn more donations!",
+            "So-so fortune. Play it safe, avoid risks!",
+            "Your luck is ordinary. Visiting the shrine could improve it!"
+        ]
+
+    embed.set_footer(text=random.choice(comments))
+
+    # Reset repeat_count
     user_data[guild_id][user_id_str]["repeat_count"] = 0
     save_json("Reimu_lots.json", user_data)
-    
+
     await interaction.followup.send(embed=embed)
     update_cooldown(user_id)
 
