@@ -466,7 +466,7 @@ async def draw_lots_command(interaction: discord.Interaction):
 
     fortune_type = result_text.split("\n")[0].split(":")[1].strip()
     good_fortunes = ["Great Blessing", "Middle Blessing", "Moderate Blessing", "Blessing"]
-    bad_fortunes = ["Curse", "Great Curse"]
+    bad_fortunes = ["Curse", "Great Curse", "Misfortune", "Great Misfortune"]
 
     if fortune_type in good_fortunes:
         comments = [
