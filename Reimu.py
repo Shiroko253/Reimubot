@@ -465,7 +465,7 @@ async def draw_lots_command(interaction: discord.Interaction):
         embed.set_thumbnail(url=bot.user.display_avatar.url)
 
     fortune_type = result_text.split("\n")[0].split(":")[1].strip()
-    good_fortunes = ["Great Blessing", "Middle Blessing", "Blessing"]
+    good_fortunes = ["Great Blessing", "Middle Blessing", "Moderate Blessing", "Blessing"]
     bad_fortunes = ["Curse", "Great Curse"]
 
     if fortune_type in good_fortunes:
