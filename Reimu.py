@@ -464,7 +464,18 @@ async def draw_lots_command(interaction: discord.Interaction):
     if bot.user.avatar:
         embed.set_thumbnail(url=bot.user.display_avatar.url)
 
-    fortune_type = result_text.split("\n")[0].split(":")[1].strip()
+    # Parse fortune type with error handling
+    try:
+        first_line = result_text.split("\n")[0]
+        if ":" in first_line:
+            fortune_type = first_line.split(":")[1].strip()
+        else:
+            logging.warning(f"[Draw Lots] Fortune format unexpected - no colon found in: {first_line}")
+            fortune_type = "Unknown"
+    except (IndexError, AttributeError) as e:
+        logging.error(f"[Draw Lots] Failed to parse fortune type from result_text: {e}")
+        fortune_type = "Unknown"
+    
     good_fortunes = ["Great Blessing", "Middle Blessing", "Moderate Blessing", "Blessing"]
     bad_fortunes = ["Curse", "Great Curse", "Misfortune", "Great Misfortune"]
 
@@ -483,6 +494,14 @@ async def draw_lots_command(interaction: discord.Interaction):
             "Great Curse… You’d better come to the shrine and pray, or I can’t guarantee tomorrow!",
             "Looks grim. Hurry to the shrine, I’ll think of something!",
             "The spirits say your luck is poor. Don’t take risks—praying is safest!"
+        ]
+    elif fortune_type == "Unknown":
+        comments = [
+            "Hmm, the spirits seem a bit confused today... Maybe the fortune slip got mixed up? Come back later!",
+            "Strange, I can't quite read this fortune clearly. My spiritual power might need some rest!",
+            "The fortune is a bit unclear—perhaps you should try again after donating to the shrine!",
+            "Something's interfering with the spiritual reading... Is there a youkai nearby?",
+            "The spirits are being mysterious today. This fortune is hard to interpret!"
         ]
     else:
         comments = [
